@@ -6,7 +6,7 @@ UNIT = 100  # 픽셀 수
 HEIGHT = 5  # 그리드 세로
 WIDTH = 5  # 그리드 가로
 
-class SmartCityEnvironment:
+class SmartCityEnvironment(tk.Tk):
     def __init__(self, window):
         self.window = window
         self.window.title("Smart City Simulation")
@@ -25,6 +25,7 @@ class SmartCityEnvironment:
         self.capital = 20000  # 초기 자본
         self.population = 0  # 초기 인구
         self.attrition_rate = 0.05  # 초기 이탈율
+        self.influx_rate_multiplier = 1  # 초기 유입률
         self.num_residential_areas = 0  # 주거공간 개수
         self.num_commercial_areas = 0  # 상업공간 개수
         self.num_industrial_areas = 0  # 산업공간 개수
@@ -139,14 +140,6 @@ class SmartCityEnvironment:
         if self.happiness < 20:
             return self.get_state(), -100, True
 
-
-        # # Check for early termination conditions
-        # if self.capital < 0 and self.negative_income_steps >= 8:
-        #     done = True
-        # if self.steps_since_last_population_check >= 1000 and self.population <= self.last_population_check:
-        #     done = True
-
-
         # 보상 조건 수정
         population_increase = self.population - self.last_population
 
@@ -204,10 +197,6 @@ class SmartCityEnvironment:
         elif self.happiness >= 100:
             self.influx_rate_multiplier = 2.0
             self.attrition_rate_multiplier = 0.2
-        else:
-            # Default values if needed
-            self.influx_rate_multiplier = 1
-            self.attrition_rate_multiplier = 1
 
     def update_population(self):
         # Assuming each residential area adds capacity for 100 people
