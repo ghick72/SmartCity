@@ -21,11 +21,6 @@ class SmartCityEnvironment:
         self.hospitals = []
         self.parks = []
 
-        # 선택 단계 초기화
-        self.current_action_phase = 'select_building_type'  # 'select_building_type' 또는 'select_location'
-        self.selected_building_type = None
-        self.selected_location = None
-
         # 초기 상태 설정
         self.capital = 20000  # 초기 자본
         self.population = 0  # 초기 인구
