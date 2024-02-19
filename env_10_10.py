@@ -6,7 +6,7 @@ UNIT = 100  # 픽셀 수
 HEIGHT = 5  # 그리드 세로
 WIDTH = 5  # 그리드 가로
 
-class SmartCityEnvironment(tk.Tk):
+class SmartCityEnvironment():
     def __init__(self, window):
         self.window = window
         self.window.title("Smart City Simulation")
@@ -24,8 +24,10 @@ class SmartCityEnvironment(tk.Tk):
         # 초기 상태 설정
         self.capital = 20000  # 초기 자본
         self.population = 0  # 초기 인구
+        self.last_population = 0  # 이전 스텝의 인구 수, 초기값 설정
         self.attrition_rate = 0.05  # 초기 이탈율
-        self.influx_rate_multiplier = 1  # 초기 유입률
+        self.attrition_rate_multiplier = 1.0 #  초기 이탈율 배율
+        self.influx_rate_multiplier = 1  # 초기 유입률 배율
         self.num_residential_areas = 0  # 주거공간 개수
         self.num_commercial_areas = 0  # 상업공간 개수
         self.num_industrial_areas = 0  # 산업공간 개수
@@ -114,10 +116,10 @@ class SmartCityEnvironment(tk.Tk):
                 placed = self.place_building(x, y, building_type)  # 건물 배치 성공 여부 반환
                 if not placed:
                     # 이미 건물이 존재하는 경우, 다음 스텝으로 넘어감
-                    return self.get_state(), 0, False
+                    return self.get_state(), 0, False ,{}
             else:
                 # 자본 부족으로 건물을 배치할 수 없는 경우
-                return self.get_state(), 0, False 
+                return self.get_state(), 0, False ,{}
         
         # 수입 및 유지비용 계산
         income = self.num_residential_areas * 25 + self.num_commercial_areas * 25 + self.num_industrial_areas * 75
@@ -128,7 +130,7 @@ class SmartCityEnvironment(tk.Tk):
         done = False
 
         if self.step_count == 21900: # 1에피소드 완료
-            return self.get_state(), -1, True
+            return self.get_state(), -1, True , {}
 
         # Update population and calculate happiness
         self.update_population()
@@ -138,7 +140,7 @@ class SmartCityEnvironment(tk.Tk):
 
         # Check for early termination conditions based on happiness
         if self.happiness < 20:
-            return self.get_state(), -100, True
+            return self.get_state(), -100, True, {}
 
         # 보상 조건 수정
         population_increase = self.population - self.last_population
@@ -199,6 +201,8 @@ class SmartCityEnvironment(tk.Tk):
             self.attrition_rate_multiplier = 0.2
 
     def update_population(self):
+        self.last_population = self.population
+        
         # Assuming each residential area adds capacity for 100 people
         total_capacity = self.num_residential_areas * 100
         available_capacity = max(0, total_capacity - self.population)
