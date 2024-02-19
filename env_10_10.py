@@ -26,7 +26,7 @@ class SmartCityEnvironment():
         self.population = 0  # 초기 인구
         self.last_population = 0  # 이전 스텝의 인구 수, 초기값 설정
         self.attrition_rate = 0.05  # 초기 이탈율
-        self.attrition_rate_multiplier = 1.0 #  초기 이탈율 배율
+        self.attrition_rate_multiplier = 1 #  초기 이탈율 배율
         self.influx_rate_multiplier = 1  # 초기 유입률 배율
         self.num_residential_areas = 0  # 주거공간 개수
         self.num_commercial_areas = 0  # 상업공간 개수
