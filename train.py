@@ -1,127 +1,148 @@
+from a import SmartCityEnvironment 
+import pylab
+import numpy as np
+import random
+from collections import deque
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
 import tkinter as tk
-from tkinter import messagebox
-import numpy as np
-import random
-from collections import deque
-from env_10_10 import SmartCityEnvironment 
-import gym
-from gym import spaces
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import random
-from collections import deque
+from shapely.geometry import Polygon, Point
+import time
 
-HEIGHT = 5
-WIDTH = 5
-UNIT = 100
+# 환경 설정
+UNIT = 100  # 픽셀 수
+HEIGHT = 5  # 그리드 세로
+WIDTH = 5  # 그리드 가로
+ACTION_SIZE = 5 * 5 * 5  # (x, y) 위치와 건물 유형 (5x5 그리드, 5종류의 건물)
 
-class SmartCityGym(gym.Env):
-    def __init__(self, window=None):
-        self.window = window
-        if window is not None:
-            self.window.title("Smart City Simulation")
-            self.canvas = tk.Canvas(window, bg='white', height=500, width=500)
-            self.draw_grid()
-            self.canvas.pack()
-        else:
-            self.canvas = None  # GUI 없이도 동작하도록 None으로 설정
-            
-        super(SmartCityGym, self).__init__()
-        self.env = SmartCityEnvironment(None)  # SmartCityEnvironment 인스턴스 생성
+# SmartCityEnvironment 클래스 생략 (앞서 제공된 코드 사용)
 
-        # 상태 공간 및 행동 공간 정의
-        self.action_space = spaces.Discrete(len(self.env.actions))  # 가능한 행동의 수
-        # 상태는 금액, 인구, 이탈률 등의 연속적인 값들로 구성되며, 각 건물 상태를 포함합니다.
-        # 여기서는 상태 공간의 크기를 예제로 설정하였으나, 실제 환경에 맞게 조정해야 합니다.
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(34,), dtype=np.float32)
-
-    def draw_grid(self):
-        if self.canvas is not None:
-            for c in range(0, WIDTH * UNIT, UNIT):
-                self.canvas.create_line(c, 0, c, HEIGHT * UNIT)
-            for r in range(0, HEIGHT * UNIT, UNIT):
-                self.canvas.create_line(0, r, WIDTH * UNIT, r)
-                
-    def step(self, action):
-        return self.env.step(action)
-
-    def reset(self):
-        return self.env.reset()
-    
-class DQN(nn.Module):
-    def __init__(self, obs_size, action_size):
+# DQN 모델
+class DQN(tf.keras.Model):
+    def __init__(self, action_size):
         super(DQN, self).__init__()
-        self.fc = nn.Sequential(
-            nn.Linear(obs_size, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, action_size)
-        )
+        self.fc1 = Dense(128, activation='relu')
+        self.fc2 = Dense(128, activation='relu')
+        self.fc_out = Dense(action_size, activation='linear')
 
-    def forward(self, x):
-        return self.fc(x)
+    def call(self, x):
+        x = self.fc1(x)
+        x = self.fc2(x)
+        return self.fc_out(x)
 
+# DQN 에이전트
 class DQNAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=10000)
-        self.gamma = 0.95  # 할인율
-        self.epsilon = 1.0  # 탐험률
-        self.epsilon_min = 0.01
+        self.memory = deque(maxlen=2000)
+        self.gamma = 0.95
+        self.epsilon = 1.0
         self.epsilon_decay = 0.995
-        self.model = DQN(state_size, action_size)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
+        self.epsilon_min = 0.01
+        self.learning_rate = 0.001
+        self.batch_size = 64
+        self.model = DQN(action_size)
+        self.optimizer = Adam(learning_rate=self.learning_rate)
+        self.target_model = DQN(action_size)
+        self.update_target_model()
+        self.memory = deque(maxlen=2000)  # 경험 재생 메모리 초기화
 
-    def remember(self, state, action, reward, next_state, done):
+    def append_sample(self, state, action, reward, next_state, done):
+        """경험 재생 메모리에 샘플을 추가합니다."""
         self.memory.append((state, action, reward, next_state, done))
+        
+    def update_target_model(self):
+        self.target_model.set_weights(self.model.get_weights())
 
-    def act(self, state):
+    def get_action(self, state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
-        state = torch.FloatTensor(state).unsqueeze(0)
-        act_values = self.model(state)
-        return np.argmax(act_values.detach().numpy())
+        else:
+            state = np.reshape(state, [1, self.state_size])
+            q_values = self.model(state)
+            return np.argmax(q_values[0])
 
-    def replay(self, batch_size):
-        minibatch = random.sample(self.memory, batch_size)
-        for state, action, reward, next_state, done in minibatch:
-            target = reward
-            if not done:
-                next_state = torch.FloatTensor(next_state).unsqueeze(0)
-                target = (reward + self.gamma * torch.max(self.model(next_state)).item())
-            state = torch.FloatTensor(state).unsqueeze(0)
-            target_f = self.model(state)
-            target_f[0][action] = target
-            self.optimizer.zero_grad()
-            loss = nn.MSELoss()(target_f, self.model(state))
-            loss.backward()
-            self.optimizer.step()
+    def train_model(self):
+        if len(self.memory) < self.batch_size:
+            return
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-def train_dqn(episode_count):
-    env = SmartCityGym()
-    state_size = 34
-    action_size = env.action_space.n
+        mini_batch = random.sample(self.memory, self.batch_size)
+        states = np.array([i[0] for i in mini_batch])
+        actions = np.array([i[1] for i in mini_batch])
+        rewards = np.array([i[2] for i in mini_batch])
+        next_states = np.array([i[3] for i in mini_batch])
+        dones = np.array([i[4] for i in mini_batch])
+
+        model_params = self.model.trainable_variables
+        with tf.GradientTape() as tape:
+            # 주 모델에서의 예측
+            predicts = self.model(states)
+            one_hot_actions = tf.one_hot(actions, self.action_size)
+            predicts = tf.reduce_sum(one_hot_actions * predicts, axis=1)
+            
+            # 타겟 모델에서의 다음 상태 예측
+            target_predicts = self.target_model(next_states)
+            max_target_predicts = tf.reduce_max(target_predicts, axis=1)  # 수정됨: 최대값만 선택
+        
+            # rewards와 dones를 float32로 변환
+            rewards = tf.cast(rewards, dtype=tf.float32)
+            dones = tf.cast(dones, dtype=tf.float32)
+        
+            # targets 계산
+            targets = rewards + (1 - dones) * self.gamma * max_target_predicts  # 수정됨: max_target_predicts의 모양이 [64]로 조정됨
+
+        
+        loss = tf.reduce_mean(tf.square(targets - predicts))
+
+        grads = tape.gradient(loss, model_params)
+        self.optimizer.apply_gradients(zip(grads, model_params))
+
+if __name__ == "__main__":
+    env = SmartCityEnvironment(render_speed=0.01)
+    state_size = 34  # 예시 상태 벡터 크기
+    action_size = ACTION_SIZE
     agent = DQNAgent(state_size, action_size)
 
-    for e in range(episode_count):
+    EPISODES = 500
+    scores = []  # 에피소드별 점수 저장
+    episodes = []  # 에피소드 번호 저장
+    for e in range(EPISODES):
+        done = False
+        score = 0
         state = env.reset()
         state = np.reshape(state, [1, state_size])
-        for time in range(500):  # 한 에피소드 당 최대 시간 설정
-            action = agent.act(state)
+
+        while not done:
+            action = agent.get_action(state)
             next_state, reward, done, _ = env.step(action)
             next_state = np.reshape(next_state, [1, state_size])
-            agent.remember(state, action, reward, next_state, done)
-            state = next_state
-            if done:
-                break
-        if len(agent.memory) > 32:
-            agent.replay(32)
-        print(f"Episode {e+1}/{episode_count}, epsilon: {agent.epsilon}")
+            score += reward
 
-train_dqn(100)  # 에피소드 수 설정
+            agent.append_sample(state, action, reward, next_state, done)
+            if len(agent.memory) >= agent.batch_size:
+                agent.train_model()
+
+            state = next_state
+
+            if done:
+                agent.update_target_model()
+                print(f"Episode: {e+1}, score: {score}, epsilon: {agent.epsilon:.2f}")
+                # 에피소드마다 학습 결과 저장
+                scores.append(score)
+                episodes.append(e)
+
+        env.mainloop()
+        
+        # 모든 에피소드가 종료된 후, 그래프 저장
+        if (e + 1) % 10 == 0:  # 매 10회의 에피소드마다 그래프 업데이트
+            pylab.figure(figsize=(10, 5))
+            pylab.plot(episodes, scores, 'b')
+            pylab.xlabel("Episode")
+            pylab.ylabel("Score")
+            pylab.savefig("./save_graph/smart_city_dqn.png")
+

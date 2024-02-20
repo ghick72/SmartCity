@@ -1,16 +1,17 @@
 import tkinter as tk
 from shapely.geometry import Polygon, Point
-
+import time
 # 환경 설정
 UNIT = 100  # 픽셀 수
 HEIGHT = 5  # 그리드 세로
 WIDTH = 5  # 그리드 가로
 
-class SmartCityEnvironment():
-    def __init__(self, window):
-        self.window = window
+class SmartCityEnvironment(tk.Tk):
+    def __init__(self, render_speed=0.01):
+        super(SmartCityEnvironment,self).__init__()  # tk.Tk 클래스의 __init__ 호출
+        self.render_speed=render_speed
         self.title("Smart City Simulation")
-        self.canvas = tk.Canvas(window, bg='white', height=HEIGHT * UNIT, width=WIDTH * UNIT)
+        self.canvas = tk.Canvas(self, bg='white', height=HEIGHT * UNIT, width=WIDTH * UNIT)
         self.draw_grid()
         self.canvas.pack()
 
@@ -57,6 +58,7 @@ class SmartCityEnvironment():
             self.canvas.create_line(c, 0, c, HEIGHT * UNIT)
         for r in range(0, HEIGHT * UNIT, UNIT):
             self.canvas.create_line(0, r, WIDTH * UNIT, r)
+            
     def is_building_at(self, x, y):
         for _, bx, by in self.buildings:
             if bx == x * UNIT and by == y * UNIT:
@@ -129,7 +131,7 @@ class SmartCityEnvironment():
         # Initialize done to False
         done = False
 
-        if self.step_count == 21900: # 1에피소드 완료
+        if self.step_count == 250: # 1에피소드 완료
             return self.get_state(), -1, True , {}
 
         # Update population and calculate happiness
@@ -244,10 +246,13 @@ class SmartCityEnvironment():
                         happiness_change += 1
         
         # 주거공간 / 병원 수에 따른 행복도 조정
-        if self.num_residential_areas < 5 or self.num_hospitals < 5:
-            happiness_change -= 1
+        if self.num_hospitals > 0:
+            if (self.num_residential_areas // self.num_hospitals) < 5:
+                happiness_change -= 1
+            else:
+                happiness_change += 1
         else:
-            happiness_change += 1
+            pass
     
         # 공원 수에 따른 행복도 조정
         happiness_change += self.num_parks
@@ -316,8 +321,8 @@ class SmartCityEnvironment():
 
         return self.get_state()
 
-    
-# 애플리케이션 실행
-window = tk.Tk()
-app = SmartCityEnvironment(window)
-window.mainloop()
+    def render(self):
+        # 게임 속도 조정
+        time.sleep(self.render_speed)
+        self.update()
+
