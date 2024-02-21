@@ -17,7 +17,6 @@ HEIGHT = 5  # 그리드 세로
 WIDTH = 5  # 그리드 가로
 ACTION_SIZE = 5 * 5 * 5  # (x, y) 위치와 건물 유형 (5x5 그리드, 5종류의 건물)
 
-# SmartCityEnvironment 클래스 생략 (앞서 제공된 코드 사용)
 
 # DQN 모델
 class DQN(tf.keras.Model):
@@ -40,7 +39,7 @@ class DQNAgent:
         self.memory = deque(maxlen=2000)
         self.gamma = 0.95
         self.epsilon = 1.0
-        self.epsilon_decay = 0.995
+        self.epsilon_decay = 0.999
         self.epsilon_min = 0.01
         self.learning_rate = 0.001
         self.batch_size = 64
@@ -66,39 +65,36 @@ class DQNAgent:
             return np.argmax(q_values[0])
 
     def train_model(self):
-        if len(self.memory) < self.batch_size:
-            return
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
+        # 메모리에서 배치 크기만큼 무작위로 샘플 추출
         mini_batch = random.sample(self.memory, self.batch_size)
-        states = np.array([i[0] for i in mini_batch])
-        actions = np.array([i[1] for i in mini_batch])
-        rewards = np.array([i[2] for i in mini_batch])
-        next_states = np.array([i[3] for i in mini_batch])
-        dones = np.array([i[4] for i in mini_batch])
 
+        states = np.array([sample[0][0] for sample in mini_batch])
+        actions = np.array([sample[1] for sample in mini_batch])
+        rewards = np.array([sample[2] for sample in mini_batch])
+        next_states = np.array([sample[3][0] for sample in mini_batch])
+        dones = np.array([sample[4] for sample in mini_batch])
+
+        # 학습 파라메터
         model_params = self.model.trainable_variables
         with tf.GradientTape() as tape:
-            # 주 모델에서의 예측
+            # 현재 상태에 대한 모델의 큐함수
             predicts = self.model(states)
-            one_hot_actions = tf.one_hot(actions, self.action_size)
-            predicts = tf.reduce_sum(one_hot_actions * predicts, axis=1)
-            
-            # 타겟 모델에서의 다음 상태 예측
+            one_hot_action = tf.one_hot(actions, self.action_size)
+            predicts = tf.reduce_sum(one_hot_action * predicts, axis=1)
+
+            # 다음 상태에 대한 타깃 모델의 큐함수
             target_predicts = self.target_model(next_states)
-            max_target_predicts = tf.reduce_max(target_predicts, axis=1)  # 수정됨: 최대값만 선택
-        
-            # rewards와 dones를 float32로 변환
-            rewards = tf.cast(rewards, dtype=tf.float32)
-            dones = tf.cast(dones, dtype=tf.float32)
-        
-            # targets 계산
-            targets = rewards + (1 - dones) * self.gamma * max_target_predicts  # 수정됨: max_target_predicts의 모양이 [64]로 조정됨
+            target_predicts = tf.stop_gradient(target_predicts)
 
-        
-        loss = tf.reduce_mean(tf.square(targets - predicts))
+            # 벨만 최적 방정식을 이용한 업데이트 타깃
+            max_q = np.amax(target_predicts, axis=-1)
+            targets = rewards + (1 - dones) * self.discount_factor * max_q
+            loss = tf.reduce_mean(tf.square(targets - predicts))
 
+        # 오류함수를 줄이는 방향으로 모델 업데이트
         grads = tape.gradient(loss, model_params)
         self.optimizer.apply_gradients(zip(grads, model_params))
 
