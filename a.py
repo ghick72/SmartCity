@@ -6,6 +6,8 @@ UNIT = 100  # 픽셀 수
 HEIGHT = 5  # 그리드 세로
 WIDTH = 5  # 그리드 가로
 
+## 지우 나 이제 된다
+
 class SmartCityEnvironment(tk.Tk):
     def __init__(self, render_speed=0.01):
         super(SmartCityEnvironment,self).__init__()  # tk.Tk 클래스의 __init__ 호출
