@@ -1,15 +1,14 @@
 from a import SmartCityEnvironment 
+import os
+import sys
 import pylab
-import numpy as np
 import random
+import numpy as np
 from collections import deque
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
-import tkinter as tk
-from shapely.geometry import Polygon, Point
-import time
+from tensorflow.keras.initializers import RandomUniform
 
 # 환경 설정
 UNIT = 100  # 픽셀 수
@@ -22,48 +21,64 @@ ACTION_SIZE = 5 * 5 * 5  # (x, y) 위치와 건물 유형 (5x5 그리드, 5종�
 class DQN(tf.keras.Model):
     def __init__(self, action_size):
         super(DQN, self).__init__()
-        self.fc1 = Dense(128, activation='relu')
-        self.fc2 = Dense(128, activation='relu')
-        self.fc_out = Dense(action_size, activation='linear')
+        self.fc1 = Dense(24, activation='relu')
+        self.fc2 = Dense(24, activation='relu')
+        self.fc_out = Dense(action_size,
+                            kernel_initializer=RandomUniform(-1e-3, 1e-3))
 
     def call(self, x):
         x = self.fc1(x)
         x = self.fc2(x)
-        return self.fc_out(x)
+        q = self.fc_out(x)
+        return q
 
-# DQN 에이전트
+
+# 카트폴 예제에서의 DQN 에이전트
 class DQNAgent:
     def __init__(self, state_size, action_size):
+        self.render = False
+
+        # 상태와 행동의 크기 정의
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=2000)
-        self.gamma = 0.95
+
+        # DQN 하이퍼파라미터
+        self.discount_factor = 0.99
+        self.learning_rate = 0.001
         self.epsilon = 1.0
         self.epsilon_decay = 0.999
         self.epsilon_min = 0.01
-        self.learning_rate = 0.001
         self.batch_size = 64
-        self.model = DQN(action_size)
-        self.optimizer = Adam(learning_rate=self.learning_rate)
-        self.target_model = DQN(action_size)
-        self.update_target_model()
-        self.memory = deque(maxlen=2000)  # 경험 재생 메모리 초기화
+        self.train_start = 1000
 
-    def append_sample(self, state, action, reward, next_state, done):
-        """경험 재생 메모리에 샘플을 추가합니다."""
-        self.memory.append((state, action, reward, next_state, done))
-        
+        # 리플레이 메모리, 최대 크기 2000
+        self.memory = deque(maxlen=2000)
+
+        # 모델과 타깃 모델 생성
+        self.model = DQN(action_size)
+        self.target_model = DQN(action_size)
+        self.optimizer = Adam(lr=self.learning_rate)
+
+        # 타깃 모델 초기화
+        self.update_target_model()
+
+    # 타깃 모델을 모델의 가중치로 업데이트
     def update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
 
+    # 입실론 탐욕 정책으로 행동 선택
     def get_action(self, state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
         else:
-            state = np.reshape(state, [1, self.state_size])
-            q_values = self.model(state)
-            return np.argmax(q_values[0])
+            q_value = self.model(state)
+            return np.argmax(q_value[0])
 
+    # 샘플 <s, a, r, s'>을 리플레이 메모리에 저장
+    def append_sample(self, state, action, reward, next_state, done):
+        self.memory.append((state, action, reward, next_state, done))
+
+    # 리플레이 메모리에서 무작위로 추출한 배치로 모델 학습
     def train_model(self):
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
