@@ -1,6 +1,8 @@
 import tkinter as tk
 from shapely.geometry import Polygon, Point
 import time
+from random import choice
+
 # 환경 설정
 UNIT = 100  # 픽셀 수
 HEIGHT = 5  # 그리드 세로
@@ -8,7 +10,7 @@ WIDTH = 5  # 그리드 가로
 
 class SmartCityEnvironment(tk.Tk):
     def __init__(self, render_speed=0.01):
-        super(SmartCityEnvironment,self).__init__()  # tk.Tk 클래스의 __init__ 호출
+        super().__init__()  # tk.Tk 클래스의 __init__ 호출
         self.render_speed=render_speed
         self.title("Smart City Simulation")
         self.canvas = tk.Canvas(self, bg='white', height=HEIGHT * UNIT, width=WIDTH * UNIT)
@@ -38,7 +40,7 @@ class SmartCityEnvironment(tk.Tk):
         self.step_count = 0
         
         # 건물 정보 및 범위 정의
-        self.buildings = []  # (type, x, y) 형식의 튜플 리스트
+        self.buildings = [[-1 for _ in range(WIDTH)] for _ in range(HEIGHT)]
 
         # 행동 공간 초기화
         self.actions = []
@@ -51,8 +53,8 @@ class SmartCityEnvironment(tk.Tk):
         for x in range(grid_size[0]):
             for y in range(grid_size[1]):
                 for building_type in range(building_types):
-                    self.actions.append((x, y, building_type))
-
+                    self.actions.append((building_type, x, y))
+        
     def draw_grid(self):
         for c in range(0, WIDTH * UNIT, UNIT):
             self.canvas.create_line(c, 0, c, HEIGHT * UNIT)
@@ -60,62 +62,57 @@ class SmartCityEnvironment(tk.Tk):
             self.canvas.create_line(0, r, WIDTH * UNIT, r)
             
     def is_building_at(self, x, y):
-        for _, bx, by in self.buildings:
-            if bx == x * UNIT and by == y * UNIT:
-                return True  # 해당 위치에 건물이 있음
-        return False  # 해당 위치에 건물이 없음
-
-    def place_building(self, x, y, building_type):
+        """해당 위치에 건물이 있는지 확인합니다."""
+        return self.buildings[y][x] != -1
+        
+    def place_building(self, building_type, x, y):
         """주어진 위치에 새로운 건물을 배치합니다."""
         if not self.is_building_at(x, y):
-            self.buildings.append((building_type, x * UNIT, y * UNIT))
-            if building_type == 0: self.num_residential_areas += 1
-            elif building_type == 1: self.num_commercial_areas += 1
-            elif building_type == 2: self.num_industrial_areas += 1
-            elif building_type == 3: self.num_hospitals += 1
-            elif building_type == 4: self.num_parks += 1
-            self.update_canvas()
-            return True  # 배치 성공
+            self.buildings[y][x] = building_type  # buildings 리스트를 업데이트합니다.
+            # 건물 유형별 개수 업데이트
+            if building_type == 0: 
+                self.num_residential_areas += 1
+            elif building_type == 1: 
+                self.num_commercial_areas += 1
+            elif building_type == 2: 
+                self.num_industrial_areas += 1
+            elif building_type == 3: 
+                self.num_hospitals += 1
+            elif building_type == 4: 
+                self.num_parks += 1
+            self.update_canvas()  # 캔버스를 업데이트하여 변경사항을 반영합니다.
+            return True
         else:
-            return False  # 배치 실패, 이미 건물이 존재함
-
+            return False
 
     def update_canvas(self):
-        self.canvas.delete("all")  # 캔버스 초기화
-        self.draw_grid()  # 그리드 다시 그리기
+        self.canvas.delete("all")  # 캔버스에 그려진 모든 것을 지웁니다.
+        self.draw_grid()  # 그리드를 다시 그립니다.
+        # HEIGHT x WIDTH 그리드를 순회하며 각 위치에 대한 처리를 수행합니다.
+        for y in range(HEIGHT):
+            for x in range(WIDTH):
+                building_type = self.buildings[y][x]  # 해당 위치의 건물 유형을 가져옵니다.
+                # 건물 유형에 따라 색상을 결정합니다. -1은 흰색, 그 외는 각 건물 유형별 색상을 사용합니다.
+                colors = ["purple", "black", "yellow", "red", "green", "white"]  # -1을 위한 흰색이 추가되었습니다.
+                color = colors[building_type] if building_type != -1 else colors[-1]  # 건물 유형별 색상을 선택하거나, -1일 경우 흰색을 선택합니다.
+                # 해당 건물 유형에 맞는 색상으로 사각형을 그립니다.
+                self.canvas.create_rectangle(x * UNIT, y * UNIT, (x + 1) * UNIT, (y + 1) * UNIT, fill=color)
 
-        # 건물 유형별 색상 정의
-        colors = {
-            0: "purple",  # 주거
-            1: "black",   # 상업
-            2: "yellow",  # 산업
-            3: "red",     # 병원
-            4: "green",   # 공원
-            -1: "white"   # 건물 없음
-        }
-
-        # 모든 건물을 순회하며 캔버스에 그림
-        for building in self.buildings:
-            building_type, x, y = building
-            color = colors.get(building_type, "white")  # 건물 유형에 따른 색상 선택, 기본값은 'white'
-            # 그리드 좌표를 픽셀 좌표로 변환
-            pixel_x, pixel_y = x * UNIT, y * UNIT
-            self.canvas.create_rectangle(pixel_x, pixel_y, pixel_x + UNIT, pixel_y + UNIT, fill=color)
 
     def step(self, action_index):
         self.step_count += 1
-        
-        if self.step_count % 10 == 0:
+                
+        if self.step_count % 5 == 0:
             action = self.actions[action_index]
-            x, y, building_type = action
+            building_type, x, y = action
 
             # 건물 배치 비용 조회
             building_costs = [6000, 5000, 2500, 6500, 450]  # 주거, 상업, 산업, 병원, 공원
             cost = building_costs[building_type]
-
+        
             if self.capital >= cost:
                 self.capital -= cost  # 비용 차감
-                placed = self.place_building(x, y, building_type)  # 건물 배치 성공 여부 반환
+                placed = self.place_building(building_type, x, y)  # 건물 배치 성공 여부 반환
                 if not placed:
                     # 이미 건물이 존재하는 경우, 다음 스텝으로 넘어감
                     return self.get_state(), 0, False ,{}
@@ -165,26 +162,23 @@ class SmartCityEnvironment(tk.Tk):
  
     def get_state(self):
         state = [
-            self.capital, self.population, self.attrition_rate,self.num_residential_areas,
-            self.num_commercial_areas, self.num_industrial_areas,
-            self.num_hospitals, self.num_parks, self.happiness
+            self.capital,
+            self.population,
+            self.attrition_rate,
+            self.num_residential_areas,
+            self.num_commercial_areas,
+            self.num_industrial_areas,
+            self.num_hospitals,
+            self.num_parks,
+            self.happiness
         ]
 
-        # 모든 좌표에 대한 건물 상태를 초기화
-        buildings_state = [[-1 for _ in range(WIDTH)] for _ in range(HEIGHT)]
-
-        # 건물이 위치한 좌표에 대해 건물 유형 할당
-        for building in self.buildings:
-            building_type, x, y = building
-            grid_x, grid_y = x // UNIT, y // UNIT  # 그리드 좌표로 변환
-            buildings_state[grid_y][grid_x] = building_type
-
-        # buildings_state를 state에 추가
-        for row in buildings_state:
-            for building_type in row:
-                state.append(building_type)
+        # buildings 리스트를 state에 포함시킴
+        buildings_state = [building_type for row in self.buildings for building_type in row]
+        state.extend(buildings_state)
 
         return state
+
     
     def adjust_population_flow(self):
         if self.happiness < 20:
@@ -263,11 +257,8 @@ class SmartCityEnvironment(tk.Tk):
     
     def get_building_type_at(self, grid_x, grid_y):
         """주어진 그리드 위치에 있는 건물의 유형을 반환합니다."""
-        for building_type, x, y in self.buildings:
-            # 저장된 건물 위치를 그리드 단위로 변환하여 비교
-            if x // UNIT == grid_x and y // UNIT == grid_y:
-                return building_type
-        return -1  # 해당 위치에 건물이 없는 경우
+        return self.buildings[grid_y][grid_x]
+
 
     
     def check_industrial_nearby(self, x, y):
@@ -307,7 +298,7 @@ class SmartCityEnvironment(tk.Tk):
         self.step_count = 0
 
         # 건물 리스트와 행동 공간 초기화
-        self.buildings = []
+        self.buildings = [[-1 for _ in range(WIDTH)] for _ in range(HEIGHT)]
         self.actions = []
 
         # 가능한 모든 건물 배치 액션을 다시 생성
@@ -325,4 +316,3 @@ class SmartCityEnvironment(tk.Tk):
         # 게임 속도 조정
         time.sleep(self.render_speed)
         self.update()
-
