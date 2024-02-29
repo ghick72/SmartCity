@@ -10,6 +10,8 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.initializers import RandomUniform
 from action_space_udlr import SmartCityEnvironment  # 환경 클래스 가져오기
 
+tf.enable_eager_execution()
+
 
 # 상태가 입력, 큐함수가 출력인 인공신경망 생성
 class DQN(tf.keras.Model):
