@@ -8,6 +8,7 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.initializers import RandomUniform
 from a import SmartCityEnvironment  # 환경 클래스 가져오기
+import matplotlib.pyplot as plt
 
 
 # 상태가 입력, 큐함수가 출력인 인공신경망 생성
@@ -154,4 +155,14 @@ if __name__ == "__main__":
         pylab.ylabel("average score")
         pylab.savefig("./save_graph/graph.png")
 
+        if done:
+            if episode > 0 and episode % 10 == 0:  # 매 100 에피소드마다 실행
+                # 텍스트 파일 생성
+                with open(f'episode_saves/episode_{episode}_summary.txt', 'w') as file:
+                    file.write(f"Episode: {episode}\n")
+                    file.writa(f"State: {state}")
+
+            print("episode: {}/{}, state: {}"
+                  .format(episode, state))
+            break
 
