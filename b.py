@@ -116,7 +116,7 @@ if __name__ == "__main__":
     scores, episodes = [], []
     score = 0
 
-    num_episode = 300
+    num_episode = 1000
     for episode in range(num_episode):
         done = True
         score = 0
@@ -157,10 +157,6 @@ if __name__ == "__main__":
 
         if episode > 0 and episode % 10 == 0:  # 매 10 에피소드마다 실행
             # 텍스트 파일 생성
-            with open(f'episode_saves/episode_{episode}_summary.txt', 'w') as file:
+            with open(f'./episode_{episode}_summary.txt', 'w') as file:
                 file.write(f"Episode: {episode}\n")
                 file.write(f"State: {state}")
-
-        print("episode: {}/{}, state: {}"
-              .format(episode, state))
-

@@ -62,7 +62,7 @@ class SmartCityEnvironment():
             return False
 
     def step(self, action):
-        if self.step_count == 250: # 1에피소드 완료
+        if self.step_count == 100: # 1에피소드 완료
             return self.get_state(), 0, False , {}
         
         self.step_count += 1
