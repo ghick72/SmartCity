@@ -26,7 +26,7 @@ class SmartCityEnvironment(tk.Tk):
         self.capital = 30000  # 초기 자본
         self.population = 0  # 초기 인구
         self.last_population = 0  # 이전 스텝의 인구 수, 초기값 설정
-        self.attrition_rate = 0.05  # 초기 이탈율
+        self.attrition_rate = 5  # 초기 이탈율
         self.attrition_rate_multiplier = 1 #  초기 이탈율 배율
         self.influx_rate_multiplier = 1  # 초기 유입률 배율
         self.num_residential_areas = 0  # 주거공간 개수
@@ -219,7 +219,7 @@ class SmartCityEnvironment(tk.Tk):
         self.population += round(population_influx)
 
        # 이탈율 관련, 인구 이탈을 계산하고 반올림
-        population_attrition = self.population * self.attrition_rate * self.attrition_rate_multiplier
+        population_attrition = self.population * self.attrition_rate * 0.01 * self.attrition_rate_multiplier
         population_attrition = round(population_attrition)  # 인구 이탈을 반올림
 
         self.population = max(0, self.population - population_attrition)

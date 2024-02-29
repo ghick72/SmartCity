@@ -20,7 +20,7 @@ class SmartCityEnvironment():
         self.capital = 30000  # 초기 자본
         self.population = 0  # 초기 인구
         self.last_population = 0  # 이전 스텝의 인구 수, 초기값 설정
-        self.attrition_rate = 0.05  # 초기 이탈율
+        self.attrition_rate = 5  # 초기 이탈율
         self.attrition_rate_multiplier = 1 #  초기 이탈율 배율
         self.influx_rate_multiplier = 1  # 초기 유입률 배율
         self.num_residential_areas = 0  # 주거공간 개수
@@ -62,6 +62,8 @@ class SmartCityEnvironment():
             return False
 
     def step(self, action):
+        self.step_count += 1
+        
         # 액션을 이동 방향과 건물 유형으로 변환
         direction = action // 5  # 이동 방향
         building_type = action % 5  # 건물 유형
@@ -72,11 +74,14 @@ class SmartCityEnvironment():
         
         new_x = self.agent_position[0] + move[0]
         new_y = self.agent_position[1] + move[1]
+
+        # Update population and calculate happiness
+        self.update_population()
+        self.calculate_happiness()
+        # Adjust population influx and attrition based on happiness
+        self.adjust_population_flow()
         
         # 새 위치가 유효한지 확인하고, 가능하다면 이동 및 건물 배치 시도
-
-        self.step_count += 1
-                
       # 1. 이동할 수 있는 좌표인지 확인
         if 0 <= new_x < WIDTH and 0 <= new_y < HEIGHT:
             # 1-1. 이동할 수 있는 좌표라면 좌표 이동
@@ -94,34 +99,26 @@ class SmartCityEnvironment():
                     self.place_building(building_type, new_x, new_y)  # 건물 배치
                 else:
                     # 자본 부족으로 건물을 배치할 수 없는 경우
-                    return self.get_state(), 0, False ,{}  # 비용이 충분하지 않다는 정보를 보상에 반영
+                    return self.get_state(), 0, True ,{}  # 비용이 충분하지 않다는 정보를 보상에 반영
             else:
                 # 2-2. 건물을 지을 수 없는 좌표라면 비용 차감x
-                return self.get_state(), 0, False, {}
+                return self.get_state(), 0, True, {}
         else:
             # 1-2. 이동할 수 없는 좌표라면 좌표 이동x
-            return self.get_state(), -10, False, {}  # 이동할 수 없는 행동을 취한 것에 대한 패널티 반영
+            return self.get_state(), -10, True, {}  # 이동할 수 없는 행동을 취한 것에 대한 패널티 반영
         
         # 수입 및 유지비용 계산
         income = self.num_residential_areas * 25 + self.num_commercial_areas * 25 + self.num_industrial_areas * 75
         maintenance = self.num_hospitals * 100 + self.num_parks * 150
         self.capital += (income - maintenance)
-        
-        # Initialize done to False
-        done = False
 
         if self.step_count == 250: # 1에피소드 완료
-            return self.get_state(), -1, True , {}
+            return self.get_state(), -1, False , {}
 
-        # Update population and calculate happiness
-        self.update_population()
-        self.calculate_happiness()
-        # Adjust population influx and attrition based on happiness
-        self.adjust_population_flow()
 
         # Check for early termination conditions based on happiness
         if self.happiness < 20:
-            return self.get_state(), -100, True, {}
+            return self.get_state(), -100, False, {}
 
         # 보상 조건 수정
         population_increase = self.population - self.last_population
@@ -140,7 +137,7 @@ class SmartCityEnvironment():
 
         self.last_population = self.population
 
-        return self.get_state(), reward, done, {}
+        return self.get_state(), reward, True, {}
  
     def get_state(self):
         state = [
@@ -189,7 +186,7 @@ class SmartCityEnvironment():
         self.population += round(population_influx)
 
        # 이탈율 관련, 인구 이탈을 계산하고 반올림
-        population_attrition = self.population * self.attrition_rate * self.attrition_rate_multiplier
+        population_attrition = self.population * self.attrition_rate * 0.01 * self.attrition_rate_multiplier
         population_attrition = round(population_attrition)  # 인구 이탈을 반올림
 
         self.population = max(0, self.population - population_attrition)
@@ -268,7 +265,7 @@ class SmartCityEnvironment():
         # 환경을 초기 상태로 리셋
         self.capital = 30000
         self.population = 0
-        self.attrition_rate = 0.05
+        self.attrition_rate = 5
         self.num_residential_areas = 0
         self.num_commercial_areas = 0
         self.num_industrial_areas = 0
@@ -282,3 +279,21 @@ class SmartCityEnvironment():
         self.agent_position = [1, 1]  # 에이전트의 초기 위치 설정
 
         return self.get_state()
+
+env = SmartCityEnvironment()
+c = True
+
+while c:
+    a , b , c, _ = env.step(0)
+    print(1)
+    a , b , c, _ = env.step(0)
+    print(2)
+    a , b , c, _ = env.step(0)
+    print(3)
+    a , b , c, _ = env.step(0)
+    print(4)
+    a , b , c, _ = env.step(0)
+    print(5)
+    a , b , c, _ = env.step(0)
+    print(6)
+    

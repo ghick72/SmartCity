@@ -2,7 +2,6 @@ import os
 import pylab
 import random
 import numpy as np
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # or '2' or '3'
 import tensorflow as tf
 from collections import deque
 from tensorflow.keras.layers import Dense
@@ -15,8 +14,8 @@ from a import SmartCityEnvironment  # 환경 클래스 가져오기
 class DQN(tf.keras.Model):
     def __init__(self, action_size):
         super(DQN, self).__init__()
-        self.fc1 = Dense(24, input_shape=(state_size,), activation='relu')
-        self.fc2 = Dense(24, activation='relu')
+        self.fc1 = Dense(64, activation='relu')
+        self.fc2 = Dense(64, activation='relu')
         self.fc_out = Dense(action_size, kernel_initializer=RandomUniform(-1e-3, 1e-3))
 
     def call(self, x):
@@ -62,10 +61,9 @@ class DQNAgent:
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
         else:
+            state = np.expand_dims(state, axis=0)  # 차원 확장: (상태_크기,) -> (1, 상태_크기)
             q_value = self.model(state)
-            q_value_numpy = q_value.numpy()  # .numpy() 메소드로 심볼릭 텐서를 NumPy 배열로 변환
-
-            return np.argmax(q_value_numpy)
+            return np.argmax(q_value)
 
     # 샘플 <s, a, r, s'>을 리플레이 메모리에 저장
     def append_sample(self, state, action, reward, next_state, done):
@@ -75,16 +73,16 @@ class DQNAgent:
     def train_model(self):
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
-    
+
         # 메모리에서 배치 크기만큼 무작위로 샘플 추출
         mini_batch = random.sample(self.memory, self.batch_size)
-    
-        states = np.array([sample[0] for sample in mini_batch])
+
+        states = np.array([sample[0][0] for sample in mini_batch])
         actions = np.array([sample[1] for sample in mini_batch])
         rewards = np.array([sample[2] for sample in mini_batch])
-        next_states = np.array([sample[3] for sample in mini_batch])
+        next_states = np.array([sample[3][0] for sample in mini_batch])
         dones = np.array([sample[4] for sample in mini_batch])
-    
+
         # 학습 파라메터
         model_params = self.model.trainable_variables
         with tf.GradientTape() as tape:
@@ -92,19 +90,16 @@ class DQNAgent:
             predicts = self.model(states)
             one_hot_action = tf.one_hot(actions, self.action_size)
             predicts = tf.reduce_sum(one_hot_action * predicts, axis=1)
-            # 선택된 액션에 해당하는 Q-값만 추출
-            actions_indices = tf.range(self.batch_size) * tf.shape(predicts)[1] + actions
-            predicts = tf.gather(tf.reshape(predicts, [-1]), actions_indices)
+
             # 다음 상태에 대한 타깃 모델의 큐함수
             target_predicts = self.target_model(next_states)
             target_predicts = tf.stop_gradient(target_predicts)
-    
+
             # 벨만 최적 방정식을 이용한 업데이트 타깃
-            max_q = tf.reduce_max(target_predicts, axis=-1)
+            max_q = np.amax(target_predicts, axis=-1)
             targets = rewards + (1 - dones) * self.discount_factor * max_q
-        
             loss = tf.reduce_mean(tf.square(targets - predicts))
-    
+
         # 오류함수를 줄이는 방향으로 모델 업데이트
         grads = tape.gradient(loss, model_params)
         self.optimizer.apply_gradients(zip(grads, model_params))
@@ -122,22 +117,26 @@ if __name__ == "__main__":
 
     num_episode = 300
     for e in range(num_episode):
-        done = False
+        done = True
         score = 0
         # env 초기화
         state = env.reset()
         state = np.reshape(state, [1, state_size])
-        while not done:
+        env.step_count = 0
+        while done:
+
             # 현재 상태로 행동을 선택
             action = agent.get_action(state)
+            
             # 선택한 행동으로 환경에서 한 타임스텝 진행
             next_state, reward, done, info = env.step(action)
             next_state = np.reshape(next_state, [1, state_size])
-    
+
             score += reward
             # 리플레이 메모리에 샘플 <s, a, r, s'> 저장
             agent.append_sample(state, action, reward, next_state, done)
             # 매 타임스텝마다 학습
+            
             if len(agent.memory) >= agent.train_start:
                 agent.train_model()
 
