@@ -2,7 +2,6 @@ import tkinter as tk
 from shapely.geometry import Polygon, Point
 import time
 from random import choice
-
 # 환경 설정
 UNIT = 100  # 픽셀 수
 HEIGHT = 5  # 그리드 세로
@@ -10,12 +9,11 @@ WIDTH = 5  # 그리드 가로
 
 class SmartCityEnvironment(tk.Tk):
     def __init__(self, render_speed=0.01):
-        super().__init__()  # tk.Tk 클래스의 __init__ 호출
+        super(SmartCityEnvironment, self).__init__()  # tk.Tk 클래스의 __init__ 호출
         self.render_speed=render_speed
         self.title("Smart City Simulation")
         self.canvas = tk.Canvas(self, bg='white', height=HEIGHT * UNIT, width=WIDTH * UNIT)
         self.draw_grid()
-        self.canvas.pack()
 
         # 건축물 리스트 초기화
         self.residential_areas = []
@@ -25,7 +23,7 @@ class SmartCityEnvironment(tk.Tk):
         self.parks = []
 
         # 초기 상태 설정
-        self.capital = 20000  # 초기 자본
+        self.capital = 30000  # 초기 자본
         self.population = 0  # 초기 인구
         self.last_population = 0  # 이전 스텝의 인구 수, 초기값 설정
         self.attrition_rate = 0.05  # 초기 이탈율
@@ -42,18 +40,10 @@ class SmartCityEnvironment(tk.Tk):
         # 건물 정보 및 범위 정의
         self.buildings = [[-1 for _ in range(WIDTH)] for _ in range(HEIGHT)]
 
-        # 행동 공간 초기화
-        self.actions = []
+        self.agent_position = [1, 1]  # 에이전트의 초기 위치 설정
+        self.num_actions = 20  # 상하좌우 * 건물 유형의 개수 (4 * 5 = 20)
 
-        # 그리드 사이즈 및 건물 유형
-        grid_size = (WIDTH, HEIGHT)
-        building_types = 5  # 주거공간(0), 상업공간(1), 산업공간(2), 병원(3), 공원(4)
-
-        # 각 좌표마다 가능한 모든 건물 유형에 대한 행동 생성
-        for x in range(grid_size[0]):
-            for y in range(grid_size[1]):
-                for building_type in range(building_types):
-                    self.actions.append((building_type, x, y))
+        self.canvas.pack()
         
     def draw_grid(self):
         for c in range(0, WIDTH * UNIT, UNIT):
@@ -99,26 +89,48 @@ class SmartCityEnvironment(tk.Tk):
                 self.canvas.create_rectangle(x * UNIT, y * UNIT, (x + 1) * UNIT, (y + 1) * UNIT, fill=color)
 
 
-    def step(self, action_index):
+    def step(self, action):
+        # 액션을 이동 방향과 건물 유형으로 변환
+        direction = action // 5  # 이동 방향
+        building_type = action % 5  # 건물 유형
+        
+        # 이동 방향에 따른 에이전트 위치 업데이트 로직...
+        moves = [(0, -1), (0, 1), (-1, 0), (1, 0)]  # 상, 하, 좌, 우
+        move = moves[direction]
+        
+        new_x = self.agent_position[0] + move[0]
+        new_y = self.agent_position[1] + move[1]
+        
+        # 새 위치가 유효한지 확인하고, 가능하다면 이동 및 건물 배치 시도
+
+
+
         self.step_count += 1
                 
-        if self.step_count % 5 == 0:
-            action = self.actions[action_index]
-            building_type, x, y = action
+      # 1. 이동할 수 있는 좌표인지 확인
+        if 0 <= new_x < WIDTH and 0 <= new_y < HEIGHT:
+            # 1-1. 이동할 수 있는 좌표라면 좌표 이동
+            self.agent_position = [new_x, new_y]
 
-            # 건물 배치 비용 조회
-            building_costs = [6000, 5000, 2500, 6500, 450]  # 주거, 상업, 산업, 병원, 공원
-            cost = building_costs[building_type]
-        
-            if self.capital >= cost:
-                self.capital -= cost  # 비용 차감
-                placed = self.place_building(building_type, x, y)  # 건물 배치 성공 여부 반환
-                if not placed:
-                    # 이미 건물이 존재하는 경우, 다음 스텝으로 넘어감
-                    return self.get_state(), 0, False ,{}
+            # 2. 건물을 지을 수 있는 좌표인지 확인
+            if not self.is_building_at(new_x, new_y):
+                # 건물 배치 비용 조회
+                building_costs = [6000, 5000, 2500, 6500, 450]  # 주거, 상업, 산업, 병원, 공원
+                cost = building_costs[building_type]
+
+                # 2-1. 건물을 지을 수 있는 좌표라면 비용 차감
+                if self.capital >= cost:
+                    self.capital -= cost  # 비용 차감
+                    self.place_building(building_type, new_x, new_y)  # 건물 배치
+                else:
+                    # 자본 부족으로 건물을 배치할 수 없는 경우
+                    return self.get_state(), 0, False ,{}  # 비용이 충분하지 않다는 정보를 보상에 반영
             else:
-                # 자본 부족으로 건물을 배치할 수 없는 경우
-                return self.get_state(), 0, False ,{}
+                # 2-2. 건물을 지을 수 없는 좌표라면 비용 차감x
+                return self.get_state(), 0, False, {}
+        else:
+            # 1-2. 이동할 수 없는 좌표라면 좌표 이동x
+            return self.get_state(), -10, False, {}  # 이동할 수 없는 행동을 취한 것에 대한 패널티 반영
         
         # 수입 및 유지비용 계산
         income = self.num_residential_areas * 25 + self.num_commercial_areas * 25 + self.num_industrial_areas * 75
@@ -176,7 +188,6 @@ class SmartCityEnvironment(tk.Tk):
         # buildings 리스트를 state에 포함시킴
         buildings_state = [building_type for row in self.buildings for building_type in row]
         state.extend(buildings_state)
-
         return state
 
     
@@ -286,7 +297,7 @@ class SmartCityEnvironment(tk.Tk):
     
     def reset(self):
         # 환경을 초기 상태로 리셋
-        self.capital = 20000
+        self.capital = 30000
         self.population = 0
         self.attrition_rate = 0.05
         self.num_residential_areas = 0
@@ -299,13 +310,7 @@ class SmartCityEnvironment(tk.Tk):
 
         # 건물 리스트와 행동 공간 초기화
         self.buildings = [[-1 for _ in range(WIDTH)] for _ in range(HEIGHT)]
-        self.actions = []
-
-        # 가능한 모든 건물 배치 액션을 다시 생성
-        for x in range(WIDTH):
-            for y in range(HEIGHT):
-                for building_type in range(5):  # 건물 유형의 개수
-                    self.actions.append((x, y, building_type))
+        self.agent_position = [1, 1]  # 에이전트의 초기 위치 설정
 
         # 캔버스와 관련된 추가적인 초기화 작업이 필요하다면 여기서 수행
         self.update_canvas()
@@ -316,3 +321,4 @@ class SmartCityEnvironment(tk.Tk):
         # 게임 속도 조정
         time.sleep(self.render_speed)
         self.update()
+
