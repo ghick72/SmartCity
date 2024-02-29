@@ -159,7 +159,7 @@ if __name__ == "__main__":
             # 텍스트 파일 생성
             with open(f'episode_saves/episode_{episode}_summary.txt', 'w') as file:
                 file.write(f"Episode: {episode}\n")
-                file.writa(f"State: {state}")
+                file.write(f"State: {state}")
 
         print("episode: {}/{}, state: {}"
               .format(episode, state))
