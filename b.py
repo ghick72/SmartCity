@@ -8,16 +8,16 @@ from collections import deque
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.initializers import RandomUniform
-from action_space_udlr import SmartCityEnvironment  # 환경 클래스 가져오기
+from a import SmartCityEnvironment  # 환경 클래스 가져오기
 
 
 # 상태가 입력, 큐함수가 출력인 인공신경망 생성
 class DQN(tf.keras.Model):
     def __init__(self, action_size):
         super(DQN, self).__init__()
-        self.fc1 = Dense(24, input_shape=(state_size,), activation='relu', dtype='float32')
-        self.fc2 = Dense(24, activation='relu', dtype='float32')
-        self.fc_out = Dense(action_size, kernel_initializer=RandomUniform(-1e-3, 1e-3), dtype='float32')
+        self.fc1 = Dense(24, input_shape=(state_size,), activation='relu')
+        self.fc2 = Dense(24, activation='relu')
+        self.fc_out = Dense(action_size, kernel_initializer=RandomUniform(-1e-3, 1e-3))
 
     def call(self, x):
         x = self.fc1(x)
@@ -79,11 +79,11 @@ class DQNAgent:
         # 메모리에서 배치 크기만큼 무작위로 샘플 추출
         mini_batch = random.sample(self.memory, self.batch_size)
     
-        states = np.array([sample[0] for sample in mini_batch], dtype=np.float32)
-        actions = np.array([sample[1] for sample in mini_batch], dtype=np.int32)
-        rewards = np.array([sample[2] for sample in mini_batch], dtype=np.float32)
-        next_states = np.array([sample[3] for sample in mini_batch], dtype=np.float32)
-        dones = np.array([sample[4] for sample in mini_batch], dtype=np.float32)
+        states = np.array([sample[0] for sample in mini_batch])
+        actions = np.array([sample[1] for sample in mini_batch])
+        rewards = np.array([sample[2] for sample in mini_batch])
+        next_states = np.array([sample[3] for sample in mini_batch])
+        dones = np.array([sample[4] for sample in mini_batch])
     
         # 학습 파라메터
         model_params = self.model.trainable_variables
@@ -112,7 +112,7 @@ class DQNAgent:
 
 if __name__ == "__main__":
     # 환경 및 DQNAgent 인스턴스 생성
-    env = SmartCityEnvironment(render_speed=0.01)
+    env = SmartCityEnvironment()
     state_size = 34
     action_size = 20
     # DQN 에이전트 생성
@@ -128,14 +128,12 @@ if __name__ == "__main__":
         state = env.reset()
         state = np.reshape(state, [1, state_size])
         while not done:
-            env.render()
             # 현재 상태로 행동을 선택
             action = agent.get_action(state)
             # 선택한 행동으로 환경에서 한 타임스텝 진행
             next_state, reward, done, info = env.step(action)
             next_state = np.reshape(next_state, [1, state_size])
     
-            # 타임스텝마다 보상 0.1, 에피소드가 중간에 끝나면 -1 보상
             score += reward
             # 리플레이 메모리에 샘플 <s, a, r, s'> 저장
             agent.append_sample(state, action, reward, next_state, done)
