@@ -113,10 +113,10 @@ if __name__ == "__main__":
     # DQN 에이전트 생성
     agent = DQNAgent(state_size, action_size)
     scores, episodes = [], []
-    score_avg = 0
+    score = 0
 
     num_episode = 300
-    for e in range(num_episode):
+    for episode in range(num_episode):
         done = True
         score = 0
         # env 초기화
@@ -124,14 +124,13 @@ if __name__ == "__main__":
         state = np.reshape(state, [1, state_size])
         env.step_count = 0
         while done:
-
             # 현재 상태로 행동을 선택
             action = agent.get_action(state)
-            
+
             # 선택한 행동으로 환경에서 한 타임스텝 진행
             next_state, reward, done, info = env.step(action)
             next_state = np.reshape(next_state, [1, state_size])
-
+            
             score += reward
             # 리플레이 메모리에 샘플 <s, a, r, s'> 저장
             agent.append_sample(state, action, reward, next_state, done)
@@ -141,18 +140,18 @@ if __name__ == "__main__":
                 agent.train_model()
 
             state = next_state
-            if done:
-                # 각 에피소드마다 타깃 모델을 모델의 가중치로 업데이트
-                agent.update_target_model()
-                # 에피소드마다 학습 결과 출력
-                print("episode: {:3d} | score avg: {:3.2f} | memory length: {:4d} | epsilon: {:.4f}".format(
-                      e, score_avg, len(agent.memory), agent.epsilon))
-                # 에피소드마다 학습 결과 그래프로 저장
-                scores.append(score_avg)
-                episodes.append(e)
-                pylab.plot(episodes, scores, 'b')
-                pylab.xlabel("episode")
-                pylab.ylabel("average score")
-                pylab.savefig("./save_graph/graph.png")
+            
+        # 각 에피소드마다 타깃 모델을 모델의 가중치로 업데이트
+        agent.update_target_model()
+        # 에피소드마다 학습 결과 출력
+        print("episode: {:3d} | score: {:3.2f} | memory length: {:4d} | epsilon: {:.4f}".format(
+              episode, score, len(agent.memory), agent.epsilon))
+        # 에피소드마다 학습 결과 그래프로 저장
+        scores.append(score)
+        episodes.append(episode)
+        pylab.plot(episodes, scores, 'b')
+        pylab.xlabel("episode")
+        pylab.ylabel("average score")
+        pylab.savefig("./save_graph/graph.png")
 
 

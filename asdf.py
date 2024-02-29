@@ -62,23 +62,8 @@ class SmartCityEnvironment():
             return False
 
     def step(self, action):
-        if self.step_count == 250: # 1에피소드 완료
-            return self.get_state(), 0, False , {}
-        
         self.step_count += 1
         
-
-        # Update population and calculate happiness
-        self.update_population()
-        self.calculate_happiness()
-        # Adjust population influx and attrition based on happiness
-        self.adjust_population_flow()
-
-        # 수입 및 유지비용 계산
-        income = self.num_residential_areas * 25 + self.num_commercial_areas * 25 + self.num_industrial_areas * 75
-        maintenance = self.num_hospitals * 100 + self.num_parks * 150
-        self.capital += (income - maintenance)
-
         # 액션을 이동 방향과 건물 유형으로 변환
         direction = action // 5  # 이동 방향
         building_type = action % 5  # 건물 유형
@@ -89,6 +74,10 @@ class SmartCityEnvironment():
         
         new_x = self.agent_position[0] + move[0]
         new_y = self.agent_position[1] + move[1]
+
+        # Update population and calculate happiness
+        self.update_population()
+        # Adjust population influx and attrition based on happiness
         
         # 새 위치가 유효한지 확인하고, 가능하다면 이동 및 건물 배치 시도
       # 1. 이동할 수 있는 좌표인지 확인
@@ -116,28 +105,16 @@ class SmartCityEnvironment():
             # 1-2. 이동할 수 없는 좌표라면 좌표 이동x
             return self.get_state(), 0, True, {}  # 이동할 수 없는 행동을 취한 것에 대한 패널티
         
-        # Check for early termination conditions based on happiness
-        if self.happiness < 20:
-            return self.get_state(), -100, False, {}
+        # 수입 및 유지비용 계산
+        income = self.num_residential_areas * 25 + self.num_commercial_areas * 25 + self.num_industrial_areas * 75
+        maintenance = self.num_hospitals * 100 + self.num_parks * 150
+        self.capital += (income - maintenance)
 
-        # 보상 조건 수정
-        population_increase = self.population - self.last_population
+        if self.step_count == 250: # 1에피소드 완료
+            return self.get_state(), 0, False , {}
 
-        reward = 0
         
-        if population_increase > 0:
-            if population_increase >= 100:
-                reward += 20
-            elif population_increase >= 50:
-                reward += 10
-            elif population_increase >= 20:
-                reward += 5
-            elif population_increase >= 10:
-                reward += 1
-
-        self.last_population = self.population
-        
-        return self.get_state(), reward, True, {}
+        return self.get_state(), 10, True, {}
  
     def get_state(self):
         state = [
@@ -157,23 +134,6 @@ class SmartCityEnvironment():
         state.extend(buildings_state)
         return state
 
-    
-    def adjust_population_flow(self):
-        if self.happiness < 20:
-            pass
-        elif 20 <= self.happiness < 40:
-            self.influx_rate_multiplier = 0.2
-            self.attrition_rate_multiplier = 2.0
-        elif 40 <= self.happiness < 60:
-            self.influx_rate_multiplier = 0.5
-            self.attrition_rate_multiplier = 1.5
-        elif 60 <= self.happiness < 80:
-            self.influx_rate_multiplier = 1.5
-            self.attrition_rate_multiplier = 0.5
-        elif self.happiness >= 100:
-            self.influx_rate_multiplier = 2.0
-            self.attrition_rate_multiplier = 0.2
-
     def update_population(self):
         self.last_population = self.population
         
@@ -191,47 +151,6 @@ class SmartCityEnvironment():
 
         self.population = max(0, self.population - population_attrition)
         self.population = int(self.population)  # 인구수를 정수로 유지
-
-    def calculate_happiness(self):
-        happiness_change = 0
-        # 그리드월드 내의 모든 좌표에 대해 검사
-        for y in range(HEIGHT):
-            for x in range(WIDTH):
-                # 현재 좌표의 건물 유형 확인
-                current_building = self.get_building_type_at(x, y)
-                
-                # 주거공간 상하좌우 4칸 내 산업공간 확인
-                if current_building == 0:  # 주거공간
-                    if self.check_industrial_nearby(x, y):
-                        happiness_change -= 1
-                        
-                    # 상하좌우 4칸 내 상업공간 확인
-                    if not self.check_commercial_nearby(x, y):
-                        happiness_change -= 1
-                    else:
-                        happiness_change += 1
-                        
-                elif current_building == 2:  # 산업공간
-                    if not self.check_commercial_nearby(x, y):
-                        happiness_change -= 1
-                    else:
-                        happiness_change += 1
-        
-        # 주거공간 / 병원 수에 따른 행복도 조정
-        if self.num_hospitals > 0:
-            if (self.num_residential_areas // self.num_hospitals) < 5:
-                happiness_change -= 1
-            else:
-                happiness_change += 1
-        else:
-            pass
-    
-        # 공원 수에 따른 행복도 조정
-        happiness_change += self.num_parks
-        
-        # 행복도 업데이트
-        self.happiness += happiness_change
-        self.happiness = min(100, max(0, self.happiness))
     
     def get_building_type_at(self, grid_x, grid_y):
         """주어진 그리드 위치에 있는 건물의 유형을 반환합니다."""
