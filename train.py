@@ -9,6 +9,8 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.initializers import RandomUniform
 from action_space_udlr import SmartCityEnvironment  # 환경 클래스 가져오기
 
+tf.enable_eager_execution()
+
 
 # 상태가 입력, 큐함수가 출력인 인공신경망 생성
 class DQN(tf.keras.Model):
@@ -64,7 +66,8 @@ class DQNAgent:
             return random.randrange(self.action_size)
         else:
             q_value = self.model(state)
-            return np.argmax(q_value[0])
+            q_value_numpy = q_value[0].numpy()
+            return np.argmax(q_value_numpy)
 
     # 샘플 <s, a, r, s'>을 리플레이 메모리에 저장
     def append_sample(self, state, action, reward, next_state, done):
