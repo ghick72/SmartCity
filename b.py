@@ -156,7 +156,7 @@ if __name__ == "__main__":
         pylab.savefig("./save_graph/graph.png")
 
         if done:
-            if episode > 0 and episode % 10 == 0:  # 매 100 에피소드마다 실행
+            if episode > 0 and episode % 10 == 0:  # 매 10 에피소드마다 실행
                 # 텍스트 파일 생성
                 with open(f'episode_saves/episode_{episode}_summary.txt', 'w') as file:
                     file.write(f"Episode: {episode}\n")
