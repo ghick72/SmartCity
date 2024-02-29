@@ -64,9 +64,7 @@ class DQNAgent:
             return random.randrange(self.action_size)
         else:
             q_value = self.model(state)
-            q_value_numpy = q_value[0].numpy()  # .numpy() 메소드로 심볼릭 텐서를 NumPy 배열로 변환
-
-            return np.argmax(q_value_numpy)
+            return np.argmax(q_value[0])
 
     # 샘플 <s, a, r, s'>을 리플레이 메모리에 저장
     def append_sample(self, state, action, reward, next_state, done):
