@@ -15,13 +15,15 @@ import matplotlib.pyplot as plt
 class DQN(tf.keras.Model):
     def __init__(self, action_size):
         super(DQN, self).__init__()
-        self.fc1 = Dense(64, activation='relu')
-        self.fc2 = Dense(64, activation='relu')
+        self.fc1 = Dense(256, activation='relu')
+        self.fc2 = Dense(128, activation='relu')
+        self.fc3 = Dense(64, activation='relu')
         self.fc_out = Dense(action_size, kernel_initializer=RandomUniform(-1e-3, 1e-3))
 
     def call(self, x):
         x = self.fc1(x)
         x = self.fc2(x)
+        x = self.fc3(x)
         q = self.fc_out(x)
         return q
 
@@ -37,13 +39,13 @@ class DQNAgent:
         self.discount_factor = 0.99
         self.learning_rate = 0.001
         self.epsilon = 1.0
-        self.epsilon_decay = 0.999
-        self.epsilon_min = 0.01
-        self.batch_size = 64
-        self.train_start = 1000
+        self.epsilon_decay = 0.99999
+        self.epsilon_min = 0.1
+        self.batch_size = 128
+        self.train_start = 2000
 
         # 리플레이 메모리, 최대 크기 2000
-        self.memory = deque(maxlen=2000)
+        self.memory = deque(maxlen=4000)
 
         # 모델과 타깃 모델 생성
         self.model = DQN(action_size)
@@ -116,7 +118,7 @@ if __name__ == "__main__":
     scores, episodes = [], []
     score = 0
 
-    num_episode = 1000
+    num_episode = 10000
     for episode in range(num_episode):
         done = True
         score = 0
@@ -145,8 +147,8 @@ if __name__ == "__main__":
         # 각 에피소드마다 타깃 모델을 모델의 가중치로 업데이트
         agent.update_target_model()
         # 에피소드마다 학습 결과 출력
-        print("episode: {:3d} | score: {:3.2f} | memory length: {:4d} | epsilon: {:.4f}".format(
-              episode, score, len(agent.memory), agent.epsilon))
+        print(f"episode: {episode:3d} | score: {score:3.2f} | steps: {env.step_count:4d} | memory length: {len(agent.memory):4d} | epsilon: {agent.epsilon:.4f}")
+
         # 에피소드마다 학습 결과 그래프로 저장
         scores.append(score)
         episodes.append(episode)

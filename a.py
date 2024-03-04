@@ -65,18 +65,20 @@ class SmartCityEnvironment():
         if self.step_count == 100: # 1에피소드 완료
             return self.get_state(), 0, False , {}
         
-        self.step_count += 1
+        # 행복도 20미만 조기종료
+        if self.happiness < 20:
+            return self.get_state(), 0, False, {}
         
+        self.step_count += 1
+        reward = 0
 
-        # Update population and calculate happiness
         self.update_population()
         self.calculate_happiness()
-        # Adjust population influx and attrition based on happiness
         self.adjust_population_flow()
 
         # 수입 및 유지비용 계산
-        income = self.num_residential_areas * 25 + self.num_commercial_areas * 25 + self.num_industrial_areas * 75
-        maintenance = self.num_hospitals * 100 + self.num_parks * 150
+        income = self.num_residential_areas * 300 + self.num_commercial_areas * 300 + self.num_industrial_areas * 550
+        maintenance = self.num_hospitals * 250 + self.num_parks * 150
         self.capital += (income - maintenance)
 
         # 액션을 이동 방향과 건물 유형으로 변환
@@ -99,39 +101,34 @@ class SmartCityEnvironment():
             # 2. 건물을 지을 수 있는 좌표인지 확인
             if not self.is_building_at(new_x, new_y):
                 # 건물 배치 비용 조회
-                building_costs = [6000, 5000, 2500, 6500, 450]  # 주거, 상업, 산업, 병원, 공원
+                building_costs = [6000, 5000, 2500, 6500, 3500]  # 주거, 상업, 산업, 병원, 공원
                 cost = building_costs[building_type]
 
                 # 2-1. 건물을 지을 수 있는 좌표라면 비용 차감
                 if self.capital >= cost:
                     self.capital -= cost  # 비용 차감
                     self.place_building(building_type, new_x, new_y)  # 건물 배치
-                else:
-                    # 자본 부족으로 건물을 배치할 수 없는 경우
-                    return self.get_state(), 0, True ,{} 
-            else:
-                # 2-2. 건물을 지을 수 없는 좌표라면 비용 차감x
-                return self.get_state(), 0, True, {}
-        else:
+                # else:
+                #     # 자본 부족으로 건물을 배치할 수 없는 경우
+                #     return self.get_state(), 0, True ,{} 
+            # else:
+            #     # 2-2. 건물을 지을 수 없는 좌표라면 비용 차감x
+            #     return self.get_state(), 0, True, {}
+        # else:
             # 1-2. 이동할 수 없는 좌표라면 좌표 이동x
-            return self.get_state(), 0, True, {}  # 이동할 수 없는 행동을 취한 것에 대한 패널티
-        
-        # 행복도 20미만 조기종료
-        if self.happiness < 20:
-            return self.get_state(), -100, False, {}
+            # return self.get_state(), -10, True, {}  # 이동할 수 없는 행동을 취한 것에 대한 패널티
+            # reward -= 10
 
         # 보상 조건
         population_increase = self.population - self.last_population
-
-        reward = 0
         
         if population_increase > 0:
             if population_increase >= 100:
-                reward += 20
+                reward += 100
             elif population_increase >= 50:
-                reward += 10
+                reward += 50
             elif population_increase >= 20:
-                reward += 5
+                reward += 10
             elif population_increase >= 10:
                 reward += 1
 
@@ -162,16 +159,16 @@ class SmartCityEnvironment():
         if self.happiness < 20:
             pass
         elif 20 <= self.happiness < 40:
-            self.influx_rate_multiplier = 0.2
+            self.influx_rate_multiplier = 0.5
             self.attrition_rate_multiplier = 2.0
         elif 40 <= self.happiness < 60:
-            self.influx_rate_multiplier = 0.5
+            self.influx_rate_multiplier = 1
             self.attrition_rate_multiplier = 1.5
         elif 60 <= self.happiness < 80:
-            self.influx_rate_multiplier = 1.5
+            self.influx_rate_multiplier = 3
             self.attrition_rate_multiplier = 0.5
         elif self.happiness >= 100:
-            self.influx_rate_multiplier = 2.0
+            self.influx_rate_multiplier = 5.0
             self.attrition_rate_multiplier = 0.2
 
     def update_population(self):
@@ -234,12 +231,10 @@ class SmartCityEnvironment():
         self.happiness = min(100, max(0, self.happiness))
     
     def get_building_type_at(self, grid_x, grid_y):
-        """주어진 그리드 위치에 있는 건물의 유형을 반환합니다."""
         return self.buildings[grid_y][grid_x]
 
     
     def check_industrial_nearby(self, x, y):
-        """상하좌우 4칸 내에 산업공간이 있는지 확인합니다."""
         for dx in range(-4, 5):  # x 방향 -4칸부터 4칸까지
             for dy in range(-4, 5):  # y 방향 -4칸부터 4칸까지
                 if dx == 0 and dy == 0:
@@ -250,7 +245,6 @@ class SmartCityEnvironment():
         return False
     
     def check_commercial_nearby(self, x, y):
-        """상하좌우 4칸 내에 상업공간이 있는지 확인합니다."""
         for dx in range(-4, 5):  # x 방향 -4칸부터 4칸까지
             for dy in range(-4, 5):  # y 방향 -4칸부터 4칸까지
                 if dx == 0 and dy == 0:
