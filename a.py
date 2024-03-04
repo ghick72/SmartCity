@@ -116,11 +116,11 @@ class SmartCityEnvironment():
             # 1-2. 이동할 수 없는 좌표라면 좌표 이동x
             return self.get_state(), 0, True, {}  # 이동할 수 없는 행동을 취한 것에 대한 패널티
         
-        # Check for early termination conditions based on happiness
+        # 행복도 20미만 조기종료
         if self.happiness < 20:
             return self.get_state(), -100, False, {}
 
-        # 보상 조건 수정
+        # 보상 조건
         population_increase = self.population - self.last_population
 
         reward = 0
