@@ -1,6 +1,5 @@
 from shapely.geometry import Polygon, Point
-import time
-import random
+
 # 환경 설정
 UNIT = 100  # 픽셀 수
 HEIGHT = 5  # 그리드 세로
@@ -66,8 +65,8 @@ class SmartCityEnvironment():
             return self.get_state(), 0, False , {}
         
         # 행복도 20미만 조기종료
-        if self.happiness < 20:
-            return self.get_state(), -1000, False, {}
+        # if self.happiness < 20:
+        #     return self.get_state(), -1000, False, {}
         
         self.step_count += 1
         reward = 0
@@ -75,7 +74,7 @@ class SmartCityEnvironment():
         self.update_population()
         self.calculate_happiness()
         self.adjust_population_flow()
-
+                
         # 수입 및 유지비용 계산
         income = self.num_residential_areas * 300 + self.num_commercial_areas * 300 + self.num_industrial_areas * 550
         maintenance = self.num_hospitals * 250 + self.num_parks * 500
@@ -107,10 +106,11 @@ class SmartCityEnvironment():
                 # 2-1. 건물을 지을 수 있는 좌표라면 비용 차감
                 if self.capital >= cost:
                     self.capital -= cost  # 비용 차감
+                    reward += 20
                     self.place_building(building_type, new_x, new_y)  # 건물 배치
-                # else:
-                #     # 자본 부족으로 건물을 배치할 수 없는 경우
-                #     return self.get_state(), 0, True ,{} 
+                else:
+                    # 자본 부족으로 건물을 배치할 수 없는 경우
+                    reward -= 10
             # else:
             #     # 2-2. 건물을 지을 수 없는 좌표라면 비용 차감x
             #     return self.get_state(), 0, True, {}
