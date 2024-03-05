@@ -67,7 +67,7 @@ class SmartCityEnvironment():
         
         # 행복도 20미만 조기종료
         if self.happiness < 20:
-            return self.get_state(), 0, False, {}
+            return self.get_state(), -1000, False, {}
         
         self.step_count += 1
         reward = 0
@@ -78,7 +78,7 @@ class SmartCityEnvironment():
 
         # 수입 및 유지비용 계산
         income = self.num_residential_areas * 300 + self.num_commercial_areas * 300 + self.num_industrial_areas * 550
-        maintenance = self.num_hospitals * 250 + self.num_parks * 150
+        maintenance = self.num_hospitals * 250 + self.num_parks * 500
         self.capital += (income - maintenance)
 
         # 액션을 이동 방향과 건물 유형으로 변환
@@ -217,9 +217,9 @@ class SmartCityEnvironment():
         # 주거공간 / 병원 수에 따른 행복도 조정
         if self.num_hospitals > 0:
             if (self.num_residential_areas // self.num_hospitals) < 5:
-                happiness_change -= 1
+                happiness_change -= 2
             else:
-                happiness_change += 1
+                happiness_change += 2
         else:
             pass
     

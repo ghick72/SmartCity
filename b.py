@@ -15,9 +15,9 @@ import matplotlib.pyplot as plt
 class DQN(tf.keras.Model):
     def __init__(self, action_size):
         super(DQN, self).__init__()
-        self.fc1 = Dense(256, activation='relu')
-        self.fc2 = Dense(128, activation='relu')
-        self.fc3 = Dense(64, activation='relu')
+        self.fc1 = Dense(128, activation='relu')
+        self.fc2 = Dense(64, activation='relu')
+        self.fc3 = Dense(32, activation='relu')
         self.fc_out = Dense(action_size, kernel_initializer=RandomUniform(-1e-3, 1e-3))
 
     def call(self, x):
@@ -39,13 +39,13 @@ class DQNAgent:
         self.discount_factor = 0.99
         self.learning_rate = 0.001
         self.epsilon = 1.0
-        self.epsilon_decay = 0.99999
+        self.epsilon_decay = 0.99995
         self.epsilon_min = 0.1
-        self.batch_size = 128
-        self.train_start = 2000
+        self.batch_size = 512
+        self.train_start = 1000
 
         # 리플레이 메모리, 최대 크기 2000
-        self.memory = deque(maxlen=4000)
+        self.memory = deque(maxlen=10000)
 
         # 모델과 타깃 모델 생성
         self.model = DQN(action_size)
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     scores, episodes = [], []
     score = 0
 
-    num_episode = 10000
+    num_episode = 1000
     for episode in range(num_episode):
         done = True
         score = 0
