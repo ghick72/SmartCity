@@ -61,23 +61,28 @@ class SmartCityEnvironment():
             return False
 
     def step(self, action):
-        if self.step_count == 100: # 1에피소드 완료
+        self.step_count += 1
+        reward = 0
+        # 모든 건물이 지어졌는지 체크
+        all_buildings_constructed = all(building != -1 for row in self.buildings for building in row)
+
+        if self.step_count == 500: # 1에피소드 완료
             return self.get_state(), 0, False , {}
         
         # 행복도 20미만 조기종료
         # if self.happiness < 20:
         #     return self.get_state(), -1000, False, {}
         
-        self.step_count += 1
-        reward = 0
+        if all_buildings_constructed:
+            return self.get_state(), 500, False, {}
 
         self.update_population()
         self.calculate_happiness()
         self.adjust_population_flow()
                 
         # 수입 및 유지비용 계산
-        income = self.num_residential_areas * 300 + self.num_commercial_areas * 300 + self.num_industrial_areas * 550
-        maintenance = self.num_hospitals * 250 + self.num_parks * 500
+        income = self.num_residential_areas * 200 + self.num_commercial_areas * 200 + self.num_industrial_areas * 550
+        maintenance = self.num_hospitals * 250 + self.num_parks * 150
         self.capital += (income - maintenance)
 
         # 액션을 이동 방향과 건물 유형으로 변환
@@ -90,7 +95,7 @@ class SmartCityEnvironment():
         
         new_x = self.agent_position[0] + move[0]
         new_y = self.agent_position[1] + move[1]
-        
+
         # 새 위치가 유효한지 확인하고, 가능하다면 이동 및 건물 배치 시도
       # 1. 이동할 수 있는 좌표인지 확인
         if 0 <= new_x < WIDTH and 0 <= new_y < HEIGHT:
@@ -106,31 +111,28 @@ class SmartCityEnvironment():
                 # 2-1. 건물을 지을 수 있는 좌표라면 비용 차감
                 if self.capital >= cost:
                     self.capital -= cost  # 비용 차감
-                    reward += 20
+                    # reward += 1
                     self.place_building(building_type, new_x, new_y)  # 건물 배치
-                else:
-                    # 자본 부족으로 건물을 배치할 수 없는 경우
-                    reward -= 10
+                # else:
+                #     # 자본 부족으로 건물을 배치할 수 없는 경우
+                #     reward -= 1
             # else:
             #     # 2-2. 건물을 지을 수 없는 좌표라면 비용 차감x
             #     return self.get_state(), 0, True, {}
         # else:
             # 1-2. 이동할 수 없는 좌표라면 좌표 이동x
             # return self.get_state(), -10, True, {}  # 이동할 수 없는 행동을 취한 것에 대한 패널티
-            # reward -= 10
+            # reward -= 1
+    
 
-        # 보상 조건
-        population_increase = self.population - self.last_population
+        # if self.capital < 0:
+        #     reward -= 1
         
-        if population_increase > 0:
-            if population_increase >= 100:
-                reward += 100
-            elif population_increase >= 50:
-                reward += 50
-            elif population_increase >= 20:
-                reward += 10
-            elif population_increase >= 10:
-                reward += 1
+        # 보상 조건
+        # population_increase = self.population - self.last_population
+        
+        if self.population > 500:
+            reward += 1
 
         self.last_population = self.population
         

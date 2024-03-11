@@ -9,7 +9,6 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.initializers import RandomUniform
 from a import SmartCityEnvironment  # 환경 클래스 가져오기
 
-num_episode = 10000
 
 # 상태가 입력, 큐함수가 출력인 인공신경망 생성
 class DQN(tf.keras.Model):
@@ -17,13 +16,11 @@ class DQN(tf.keras.Model):
         super(DQN, self).__init__()
         self.fc1 = Dense(256, activation='relu')
         self.fc2 = Dense(128, activation='relu')
-        self.fc3 = Dense(64, activation='relu')
         self.fc_out = Dense(action_size, kernel_initializer=RandomUniform(-1e-3, 1e-3))
 
     def call(self, x):
         x = self.fc1(x)
         x = self.fc2(x)
-        x = self.fc3(x)
         q = self.fc_out(x)
         return q
 
@@ -39,13 +36,13 @@ class DQNAgent:
         self.discount_factor = 0.99
         self.learning_rate = 0.001
         self.epsilon = 1.0
-        self.epsilon_decay = 1 - (1/num_episode)
-        self.epsilon_min = 0.1
-        self.batch_size = 128
-        self.train_start = 1000
+        self.epsilon_decay = 0.9999
+        self.epsilon_min = 0.01
+        self.batch_size = 64
+        self.train_start = 2000
 
         # 리플레이 메모리
-        self.memory = deque(maxlen=2000)
+        self.memory = deque(maxlen=4000)
 
         # 모델과 타깃 모델 생성
         self.model = DQN(action_size)
@@ -117,6 +114,7 @@ if __name__ == "__main__":
     agent = DQNAgent(state_size, action_size)
     scores, episodes = [], []
     score = 0
+    num_episode = 1000
 
     for episode in range(num_episode):
         done = True
@@ -156,8 +154,8 @@ if __name__ == "__main__":
         pylab.ylabel("average score")
         pylab.savefig("./save_graph/graph.png")
 
-        if episode > 0 and episode % 10 == 0:  # 매 10 에피소드마다 실행
-            # 텍스트 파일 생성
-            with open(f'./episode_{episode}_summary.txt', 'w') as file:
+        if episode > 0:  # 매 에피소드마다 실행
+            with open('./summary.txt', 'a') as file:
                 file.write(f"Episode: {episode}\n")
-                file.write(f"State: {state}")
+                file.write(f"State: {state}\n")
+                file.write('\n')  # 각 에피소드 사이에 빈 줄 추가
