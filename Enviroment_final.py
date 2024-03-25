@@ -88,29 +88,8 @@ class CityEnviroment:
             # 인구와 자본이 증가했는지 확인
             population_increase = current_month_avg_population > last_month_avg_population
             capital_increase = current_month_avg_capital > last_month_avg_capital
-
-            # 인구와 자본으로 보상 적용
-            if population_increase and capital_increase:
-                reward += 1  ##### 알파
-                self.consecutive_increases += 1
-                if self.consecutive_increases >= 3:
-                    reward += 1 ##### 베타
-                    self.consecutive_increases = 0
-            else:
-                self.consecutive_increases = 0
-            
-            # 만족도 별 보상 적용
-            if self.satisfaction < 100:
-                if self.satisfaction > self.last_month_satisfaction:
-                    reward += 1  ######### 감마
-                elif self.satisfaction < self.last_month_satisfaction:
-                    reward -= 1  ######### 감마
-            elif self.satisfaction >= 100:
-                reward += 0
             
 
-            if population_increase and capital_increase and (90 <= self.satisfaction < 100):
-                reward += 1  ########## 델타
 
             # 이번달의 상태를 지난달로 업데이트
             self.last_month_population = self.monthly_population.copy()
@@ -131,8 +110,6 @@ class CityEnviroment:
         # 시뮬레이션 종료 조건 확인
         self.week += 1
         done = self.week >= 1040 or self.population < 100 or self.satisfaction < 0
-        if self.population < 100 and self.satisfaction < 0:
-            reward -= 100
 
         # 다음 상태 반환
         next_state = [self.apartments, self.hospitals, self.communication_towers, self.ITS, 

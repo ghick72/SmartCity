@@ -3,16 +3,22 @@ class SmartCityEnvironment():
         # 초기 상태
         self.capital = 30000  # 초기 자본
         self.maintenance = 0 # 유지 비용
+        self.income = 0 # 수익
+
         self.capacity_population = 0  # 수용 가능 인원
         self.population = 0  # 인구수
-        self.income = 0 # 수익
+
         self.attrition_rate = 0.03  # 초기 이탈율
         self.influx_rate = 0.2  # 초기 유입률
+
         self.num_apartment = 0  # 주거공간 개수
         self.num_base_station = 0  # 기지국 개수
         self.num_ITS = 0  # ITS 개수
         self.num_hospitals = 0  # 병원 개수
+
         self.happiness = 60  # 행복도
+
+        self.last_reward_population_level = 0
         
     def step(self, action):
         self.apartment_cost = 6000
@@ -27,11 +33,11 @@ class SmartCityEnvironment():
         if action == 1 and self.capital > self.base_station_cost:
             self.capital -= self.base_station_cost
             self.num_base_station += 1
-            self.maintenance -= 100
+            self.maintenance -= 100  # 5%
         if action == 2 and self.capital > self.ITS_cost:
             self.capital -= self.ITS_cost
             self.num_ITS += 1
-            self.maintenance -= 5
+            self.maintenance -= 5 # 0.125%
         if action == 3 and self.capital > self.hospitals_cost:
             self.capital -= self.hospitals_cost
             self.num_hospitals += 1
@@ -39,10 +45,10 @@ class SmartCityEnvironment():
         # 행복도 계산
         self.calculate_happiness()
         # 인구 변동률 계산
-        self.adjust_population_flow
+        self.adjust_population_flow()
         # 인구 변동
         self.update_population()
-            
+        
         # 재정 변동
         self.income = self.population * 10
         self.capital += self.income + self.maintenance
@@ -52,14 +58,14 @@ class SmartCityEnvironment():
         return self.get_state(), reward, False, {}
         
     def check_if_reward(self):
-        reward_levels = [10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000]
-        for index, level in enumerate(reward_levels):
-            if self.population > level and self.last_reward_population_level < (index + 1):
-                self.last_reward_population_level = index * 10
-                return index + 1  # 인구수 임계값을 처음 초과하는 경우에만 보상 반환
+        reward_levels = [10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000]  ## 테스트용으로 잘게 나눈건가??
+        for index, level in enumerate(reward_levels, start=1):
+            if self.population > level and self.last_reward_population_level < index:
+                self.last_reward_population_level = index + 1
+                return index * 10  # 인구수 임계값을 처음 초과하는 경우에만 보상 반환
         return 0        
         
- 
+
     def get_state(self):
         state = [
             self.capital,
@@ -76,33 +82,34 @@ class SmartCityEnvironment():
     
     def adjust_population_flow(self):
         if self.happiness < 40:
-            self.influx_rate = 0.1
-            self.attrition_rate = 2.0
+            self.influx_rate *= 0.1
+            self.attrition_rate *= 2.0
         elif 40 <= self.happiness < 60:
-            self.influx_rate = 0.3
-            self.attrition_rate = 1.7
+            self.influx_rate *= 0.3
+            self.attrition_rate *= 1.7
         elif 60 <= self.happiness < 80:
-            self.influx_rate = 1
-            self.attrition_rate = 1
+            self.influx_rate *= 1
+            self.attrition_rate *= 1
         elif 80 <= self.happiness < 100:
-            self.influx_rate = 1.7
-            self.attrition_rate = 0.3
+            self.influx_rate *= 1.7
+            self.attrition_rate *= 0.3
         elif self.happiness == 100:
-            self.influx_rate = 2
-            self.attrition_rate = 0.1
+            self.influx_rate *= 2
+            self.attrition_rate *= 0.1
             
 
     def update_population(self):
-        self.population += self.capacity_population * self.influx_rate
+        self.population += int(self.capacity_population * self.influx_rate)  # 소수점 버림
         
     def calculate_happiness(self):
         if self.num_base_station * 200 < self.population:
             self.happiness -= 1
         else:
-            self.happiness += 1
+            self.happiness += 1  # 기지국이 너무 많다면?
         
         if self.num_ITS * 100 > self.population:
-            self.attrition_rate *= 1.03
+            self.influx_rate *= 1.03   ## 숫자 꼭 확인해보기
+
         if self.num_base_station * 10 < self.num_ITS:
             self.happiness -= 1
         else:
@@ -113,17 +120,22 @@ class SmartCityEnvironment():
         # 리셋
         self.capital = 30000  # 초기 자본
         self.maintenance = 0 # 유지 비용
+        self.income = 0 # 수익
+
         self.capacity_population = 0  # 수용 가능 인원
         self.population = 0  # 인구수
-        self.income = 0 # 수익
+
         self.attrition_rate = 0.03  # 초기 이탈율
         self.influx_rate = 0.2  # 초기 유입률
+
         self.num_apartment = 0  # 주거공간 개수
         self.num_base_station = 0  # 기지국 개수
         self.num_ITS = 0  # ITS 개수
         self.num_hospitals = 0  # 병원 개수
+
         self.happiness = 60  # 행복도
-        self.a = 0
+
+        self.last_reward_population_level = 0
 
         return self.get_state()
 

@@ -4,11 +4,12 @@ import random
 import matplotlib.pyplot as plt
 from collections import deque
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.python.client import device_lib
-from Enviroment import CityEnviroment
+
+from SC_txt_env import SmartCityEnvironment
+
 import pandas as pd
 import os
 import sys
@@ -21,8 +22,7 @@ class DQN(tf.keras.Model):
         super(DQN, self).__init__()
         self.fc1 = Dense(24, activation='relu')
         self.fc2 = Dense(24, activation='relu')
-        self.fc_out = Dense(action_size,
-                            kernel_initializer=RandomUniform(-1e-3, 1e-3))
+        self.fc_out = Dense(action_size, kernel_initializer=RandomUniform(-1e-3, 1e-3))
 
     def call(self, x):
         x = self.fc1(x)
@@ -79,7 +79,7 @@ class DQNAgent:
     # 리플레이 메모리에서 무작위로 추출한 배치로 모델 학습
     def train_model(self):
         if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+            self.epsilon *= self.epsilon_decay  ## step마다 입실론 감소
 
         # 메모리에서 배치 크기만큼 무작위로 샘플 추출
         mini_batch = random.sample(self.memory, self.batch_size)
@@ -114,12 +114,12 @@ class DQNAgent:
     def save_model(self, filename):
         self.model.save(filename)
 
-EPISODES = 300
+EPISODES = 3000
 
 # 환경 및 에이전트 초기화
-env = CityEnviroment()
+env = SmartCityEnvironment()
 state_size = 7
-action_size = 5
+action_size = 4
 agent = DQNAgent(state_size, action_size)
 
 episode_rewards = []
@@ -134,11 +134,15 @@ for e in range(EPISODES):
     total_reward = 0
 
     for time in range(1040):  # 520주(10년)
-        action = agent.act(state)
-        next_state, reward, done = env.step(action)
+        action = agent.get_action(state)
+        next_state, reward, done, _ = env.step(action)
         total_reward += reward
         next_state = np.reshape(next_state, [1, state_size])
-        agent.remember(state, action, reward, next_state, done)
+        agent.append_sample(state, action, reward, next_state, done)
+
+        if len(agent.memory) >= agent.train_start:
+                agent.train_model()
+
         state = next_state
 
         if done:
@@ -148,15 +152,12 @@ for e in range(EPISODES):
             #     break
 
             with open(f"./save_model/episode_results{current_time}.txt", "a") as file:
-                file.write(f"에피소드={e+1},아파트수={env.apartments}, 병원수={env.hospitals}, 기지국수={env.communication_towers}, ITS수={env.ITS}, 인구수={env.population}, 누적자본={env.capital}, 누적 만족도={env.satisfaction}, 누적보상={total_reward}\n")
+                file.write(f"에피소드={e+1},아파트수={env.num_apartment}, 병원수={env.num_hospitals}, 기지국수={env.num_base_station}, ITS수={env.num_ITS}, 수용 가능 인원={env.capacity_population}, 인구수={env.population}, 누적자본={env.capital}, 누적 만족도={env.happiness}, 누적보상={total_reward}\n")
 
             # print(f"스탭 {time}: 아파트수={env.apartments}, 병원수={env.hospitals}, 식당수={env.restaurants}, 인구수={env.population}, 누적자본={env.capital}, 누적보상={total_reward}")
 
             if e+1 == EPISODES:
                 agent.save_model(f"./save_model/model_save{current_time}.h5")  # 모델 저장
-
-            if agent.epsilon > agent.epsilon_min:
-                agent.epsilon *= agent.epsilon_decay
             
             # 에피소드마다 학습 결과 및 그래프 업데이트
             print("Episode: {:3d} | Reward: {:3d} | Epsilon: {:.3f}".format(e + 1, total_reward, agent.epsilon))
