@@ -118,7 +118,7 @@ EPISODES = 3000
 
 # 환경 및 에이전트 초기화
 env = SmartCityEnvironment()
-state_size = 7
+state_size = 11
 action_size = 4
 agent = DQNAgent(state_size, action_size)
 
@@ -145,7 +145,7 @@ for e in range(EPISODES):
 
         state = next_state
 
-        if done:
+        if done == True:
             # print(f"에피소드: {e+1}/{EPISODES}, 총 보상: {total_reward}")
 
             # if agent.check_early_stop(total_reward, e):
