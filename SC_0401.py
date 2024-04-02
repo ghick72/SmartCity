@@ -21,7 +21,7 @@ class SmartCityEnvironment():
         self.num_ITS = 0  # ITS 개수
         self.num_hospitals = 0  # 병원 개수
 
-        self.happiness = 60  # 행복도
+        self.happiness = 0  # 행복도
         self.bench_happiness = 90  # 기준 행복도
 
         self.last_reward_population_level = 0
@@ -77,7 +77,7 @@ class SmartCityEnvironment():
         
         # reward = self.check_if_reward()
 
-        reward = (self.population // 10000) + (self.happiness - self.bench_happiness)
+        reward = (self.population // 5000) + (self.happiness - self.bench_happiness)
         ## 만족도를 도달해야 양의 보상을 받을 수 있을 것. 또한, 인구수 만명당 보상으로 단위 보상 주기
 
         # print(reward)
@@ -96,9 +96,9 @@ class SmartCityEnvironment():
         self.step_count += 1
         step_done = 0
 
-        if self.step_count % 10 == 0:  # 10스탭후 인구가 0명이면 조기종료. 이는 학습 중간에도 유효함.
+        if self.step_count % 10 == 0:  # 10스탭후 인구가 0명 이하이면 조기종료. 이는 학습 중간에도 유효함.
             step_done = 1
-            if step_done == 1 and self.population == 0:
+            if step_done == 1 and self.population <= 0:
                 self.done = True
             else:
                 step_done = 0
@@ -151,7 +151,7 @@ class SmartCityEnvironment():
         self.population += float(int(self.current_capacity_population * self.influx_rate))
         
     def calculate_happiness(self):
-        self.happiness = min(300 - (self.population // self.num_base_station), 100)
+        self.happiness = max(0, min(300 - (self.population // self.num_base_station), 100))
         ## 인구수 200명당 기지국 1개 일 때 만족도 100, 인구수 300명당 기지국 1개일 때 만족도 0
 
     
@@ -177,7 +177,7 @@ class SmartCityEnvironment():
         self.num_ITS = 0  # ITS 개수
         self.num_hospitals = 0  # 병원 개수
 
-        self.happiness = 60  # 행복도
+        self.happiness = 0  # 행복도
         self.bench_happiness = 90  # 기준 행복도
 
         self.last_reward_population_level = 0
