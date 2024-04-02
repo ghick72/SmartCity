@@ -64,6 +64,7 @@ class DQNAgent:
     def update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
 
+
     # 입실론 탐욕 정책으로 행동 선택
     def get_action(self, state):
         if np.random.rand() <= self.epsilon:

@@ -58,7 +58,7 @@ class SmartCityEnvironment():
         if action == 3 and self.capital > self.hospitals_cost:
             self.capital -= self.hospitals_cost
             self.num_hospitals += 1
-            self.maintenance -= 3   # 유지비용
+            self.maintenance -= 6   # 유지비용
         
         # 행복도 계산
         try:
@@ -94,12 +94,18 @@ class SmartCityEnvironment():
         
     def check_done(self):
         self.step_count += 1
+        step_done = 0
+
+        if self.step_count % 10 == 0:  # 10스탭후 인구가 0명이면 조기종료. 이는 학습 중간에도 유효함.
+            step_done = 1
+            if step_done == 1 and self.population == 0:
+                self.done = True
+            else:
+                step_done = 0
 
         if self.step_count >= 1040:
             self.done = True
         
-        if 
-
 
     def get_state(self):
         state = [
@@ -131,7 +137,7 @@ class SmartCityEnvironment():
             self.influx_rate = self.base_influx_rate + 0.05
             self.check_ITS = 1
         elif (self.num_ITS * 400 < self.population) and (self.check_ITS == 1):  # 다시 미달이되면 초기화
-            self.influx_rate = self.base_influx_rate + 0.05
+            self.influx_rate = self.base_influx_rate
             self.check_ITS = 0
 
         if self.check_ITS and self.check_hos == 1:
