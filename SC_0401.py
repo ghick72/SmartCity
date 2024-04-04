@@ -1,12 +1,12 @@
 class SmartCityEnvironment():
     def __init__(self):
         # 초기 상태
-        self.capital = 300  # 초기 자본
+        self.capital = 500  # 초기 자본
         self.maintenance = 0 # 유지 비용
         self.income = 0 # 수익
 
         self.capacity_population = 0  # 수용 가능 인원
-        self.population = 0  # 인구수
+        self.population = 0  # 초기 인구수
         self.current_capacity_population = 0  # 수용 가능 인구 중 수용 가능 인구
         self.pop_size = 100
         
@@ -77,7 +77,7 @@ class SmartCityEnvironment():
         
         # reward = self.check_if_reward()
 
-        reward = (self.population // 5000) + (self.happiness - self.bench_happiness)
+        reward = (self.population // 5000) + min((self.happiness - self.bench_happiness), -10)
         ## 만족도를 도달해야 양의 보상을 받을 수 있을 것. 또한, 인구수 만명당 보상으로 단위 보상 주기
 
         # print(reward)
@@ -96,7 +96,7 @@ class SmartCityEnvironment():
         self.step_count += 1
         step_done = 0
 
-        if self.step_count % 10 == 0:  # 10스탭후 인구가 0명 이하이면 조기종료. 이는 학습 중간에도 유효함.
+        if self.step_count % 10 == 0:  # 10스탭마다 인구가 0명 이하이면 조기종료. 이는 학습 중간에도 유효함.
             step_done = 1
             if step_done == 1 and self.population <= 0:
                 self.done = True
@@ -127,14 +127,14 @@ class SmartCityEnvironment():
     
     def adjust_population_flow(self):
         if (self.num_hospitals * 500 >= self.population) and (self.check_hos == 0):
-            self.attrition_rate = self.base_attrition_rate - 0.003
+            self.attrition_rate = self.base_attrition_rate - 0.005
             self.check_hos = 1
         elif (self.num_hospitals * 500 < self.population) and (self.check_hos == 1):  # 다시 미달이되면 초기화
             self.attrition_rate = self.base_attrition_rate
             self.check_hos = 0
         
         if (self.num_ITS * 400 >= self.population) and (self.check_ITS == 0):
-            self.influx_rate = self.base_influx_rate + 0.05
+            self.influx_rate = self.base_influx_rate + 0.1
             self.check_ITS = 1
         elif (self.num_ITS * 400 < self.population) and (self.check_ITS == 1):  # 다시 미달이되면 초기화
             self.influx_rate = self.base_influx_rate
@@ -154,7 +154,7 @@ class SmartCityEnvironment():
         self.happiness = max(0, min(300 - (self.population // self.num_base_station), 100))
         ## 인구수 200명당 기지국 1개 일 때 만족도 100, 인구수 300명당 기지국 1개일 때 만족도 0
 
-    
+
     def reset(self):
         # 리셋
         self.capital = 300  # 초기 자본

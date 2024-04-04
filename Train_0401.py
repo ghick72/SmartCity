@@ -44,7 +44,7 @@ class DQNAgent:
         self.discount_factor = 0.99
         self.learning_rate = 0.001
         self.epsilon = 1.0
-        self.epsilon_decay = 0.999999
+        self.epsilon_decay = 0.999995
         self.epsilon_min = 0.01
         self.batch_size = 64
         self.train_start = 20000
@@ -162,13 +162,13 @@ for e in range(EPISODES):
             
             # 에피소드마다 학습 결과 및 그래프 업데이트
             print("Episode: {:0f} | Reward: {:0f} | Epsilon: {:.3f}".format(e + 1, total_reward, agent.epsilon))
-            scores.append(total_reward)
+            scores.append(env.population)
             episodes.append(e + 1)
             
             plt.plot(episodes, scores, 'b')
             plt.xlabel("Episode")
-            plt.ylabel("Score")
-            plt.title(f"City_Reward")
+            plt.ylabel("Population")
+            plt.title(f"City_Pop")
             plt.savefig(f"graph_trained.png")
             if EPISODES == e+1:
                 plt.savefig(f"./save_model/graph_trained_{current_time}.png")
